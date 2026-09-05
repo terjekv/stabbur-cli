@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: d57878415167fad46dcf5eb36a2c6201d6565407 # Reviewed client 0.1.0 source
+          ref: ce95bd9b724cf1e5d49bcf8516b6b29bf05605ee # Reviewed client 0.1.0 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout
@@ -83,7 +83,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: d57878415167fad46dcf5eb36a2c6201d6565407 # Reviewed client 0.1.0 source
+          ref: ce95bd9b724cf1e5d49bcf8516b6b29bf05605ee # Reviewed client 0.1.0 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout on Unix
@@ -127,7 +127,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: d57878415167fad46dcf5eb36a2c6201d6565407 # Reviewed client 0.1.0 source
+          ref: ce95bd9b724cf1e5d49bcf8516b6b29bf05605ee # Reviewed client 0.1.0 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout
@@ -149,21 +149,21 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: stabbur-cli
 
       - name: Check out exact public client
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: d57878415167fad46dcf5eb36a2c6201d6565407 # Reviewed client 0.1.0 source
+          ref: ce95bd9b724cf1e5d49bcf8516b6b29bf05605ee # Reviewed client 0.1.0 source
           path: stabbur-client-rust
-
-      - name: Place public client beside CLI checkout
-        run: mv stabbur-client-rust ../stabbur-client-rust
 
       - name: Check advisories, licenses, bans, and sources
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check
+          manifest-path: stabbur-cli/Cargo.toml
           rust-version: "1.88"
 
   verify-tag-main-ci-success:
@@ -216,7 +216,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: d57878415167fad46dcf5eb36a2c6201d6565407 # Reviewed client 0.1.0 source
+          ref: ce95bd9b724cf1e5d49bcf8516b6b29bf05605ee # Reviewed client 0.1.0 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout
@@ -317,7 +317,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: d57878415167fad46dcf5eb36a2c6201d6565407 # Reviewed client 0.1.0 source
+          ref: ce95bd9b724cf1e5d49bcf8516b6b29bf05605ee # Reviewed client 0.1.0 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout on Unix
