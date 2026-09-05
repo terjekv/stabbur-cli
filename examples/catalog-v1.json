@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "software": [
+    {
+      "slug": "portable-smoke",
+      "name": "Portable smoke fixture"
+    }
+  ],
+  "recipes": [
+    {
+      "name": "portable-smoke",
+      "revision": {
+        "builder": "fake",
+        "definition": {},
+        "required_capabilities": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+# Stabbur CLI
+
+`stabbur` is the primary operational interface for Stabbur 0.1. It pins
+`stabbur_client = 0.1.0` exactly, has no direct HTTP dependency, and performs every API operation
+through the blocking supported client.
+
+```bash
+stabbur bootstrap --username admin \
+  --bootstrap-secret-file /run/secrets/stabbur-bootstrap \
+  --password-file /run/secrets/stabbur-admin-password
+stabbur auth login --username operator
+stabbur --json catalog plan --file catalog.json
+stabbur --json catalog sync --file catalog.json
+stabbur catalog scan request --source-url https://example.net/recipes.git \
+  --source-revision 0123456789abcdef0123456789abcdef01234567 \
+  --idempotency-key recipes-0123456789abcdef
+stabbur target create --name firefox-manual --software firefox \
+  --recipe-revision RECIPE_REVISION_ID
+stabbur target trigger firefox-manual --idempotency-key firefox-manual-1
+stabbur software list
+stabbur software show firefox
+stabbur resolve firefox --channel stable --platform mac_os --architecture aarch64 --macos 15.0
+stabbur artifact download SHA256 --output Firefox.pkg --resume
+```
+
+Human-readable tables are the default. Add global `--json` for stable automation output. Unsafe
+publication, rejection, cancellation, principal/worker disabling, capability replacement, and
+credential rotation prompt for the exact operation; automation must pass global `--yes`.
+
+## Credentials and profiles
+
+Passwords are read interactively or from owner-only regular files. Passwords and raw tokens are
+never accepted as command arguments. Bearer credentials are resolved in this order:
+
+1. `STABBUR_TOKEN` supplied by a protected process environment;
+2. `--token-file` / `STABBUR_TOKEN_FILE`, mode 0600 or stricter on Unix;
+3. the protected profile created by `stabbur auth login`.
+
+The default profile is stored under the platform configuration directory. Its directory is mode
+0700 and the file is created atomically with mode 0600 on Unix. Use `--no-save` for ephemeral
+login or `--profile` to select an explicit profile. Prefer token files or a secret manager for
+non-interactive services.
+
+First-administrator bootstrap needs no existing profile or bearer token. `stabbur bootstrap` and
+`stabbur auth bootstrap` are equivalent; both call the one-time public bootstrap operation. Supply
+`--bootstrap-secret-file` and `--password-file` for unattended setup. If either is omitted, the CLI
+prompts only when an interactive terminal is available.
+
+An authenticated administrator can reset a human password with
+`stabbur auth reset-password USER --password-file FILE`. The longer
+`stabbur auth principal reset-password` form remains available. Account lockout recovery is a
+local server operation: stop the API and use `stabbur-server admin reset-password`.
+
+## Command map
+
+| Command     | v0.1 operations                                                              |
+| ----------- | ---------------------------------------------------------------------------- |
+| `bootstrap` | one-time unauthenticated first-administrator creation                        |
+| `auth`      | bootstrap, login, password change/reset, principals, sessions, tokens, roles |
+| `catalog`   | desired-state plan/sync, snapshots, exact lookup, durable catalog scans      |
+| `target`    | manual/interval desired policy, updates, triggers, and target run history    |
+| `software`  | list/show/create, update name, update installation metadata                  |
+| `release`   | list/show, explicit promotion, rejection                                     |
+| `variant`   | list/show within a release                                                   |
+| `channel`   | list/show, create or advance testing/stable                                  |
+| `recipe`    | list/show/create, validated builder revisions, recipe runs                   |
+| `run`       | list/create/show, logs, live watch, cancellation                             |
+| `artifact`  | metadata, locations, streaming upload, resumable verified download           |
+| `storage`   | list/show and non-mutating adapter test                                      |
+| `worker`    | list/show, provision, enable/drain, capability ceiling, token rotation       |
+| `job`       | list lightweight summaries and show full payload                             |
+| `audit`     | cursor-paginated append-only events                                          |
+| `resolve`   | select exactly one readable primary installer for a target                   |
+
+Use `stabbur <resource> <operation> --help` for exact fields. Mutable commands require the current
+numeric `--revision` shown by `show`; revision `0` creates a channel. Retryable operations require
+or accept an idempotency key.
+
+Catalog synchronization is additive and history-preserving: it creates missing software and
+recipes, updates managed software metadata with optimistic concurrency, and appends a revision
+only when the normalized desired revision differs from the latest one. It never deletes unlisted
+resources or schedules a build. See [catalog manifests](docs/catalog.md) and the committed
+[schema version 1 example](examples/catalog-v1.json).
+
+Catalog observations are advisory and append-only. `catalog scan request` queues a pinned AutoPkg
+repository for a capable outbound worker; `scan list/show/cancel`, `snapshots`, `show-snapshot`,
+and `resolve` expose durable status and exact latest-source observations. Nothing discovered is
+built until an operator binds a reviewed immutable revision with `target create` and explicitly
+triggers it or selects a fixed `--every-seconds` interval.
+
+## Remote workers and AutoPkg
+
+The server controls durable runs, capability matching, leases, retries, result verification, and
+candidate publication. Workers initiate outbound HTTPS connections; the server never opens SSH or
+a remote shell. Provision a bounded capability ceiling and write the one-time credential directly
+to a new owner-only JSON file:
+
+```bash
+stabbur-server worker --print-capabilities
+
+stabbur worker provision \
+  --name mac-builder-01 \
+  --capability runtime.portable \
+  --capability builder.fake \
+  --capability builder.autopkg \
+  --capability os.macos \
+  --capability tool.apple-xcode \
+  --output-token-file ./mac-builder-01.worker.json
+```
+
+Run capability inspection as the final worker account after its tools are installed, and use the
+complete reported list as the server-side ceiling. A partial ceiling is rejected rather than
+silently hiding newly detected execution capability.
+
+Move that file through a protected channel to the macOS host, then run the server-supplied worker
+runtime under the local service supervisor:
+
+```bash
+stabbur-server worker \
+  --server-url https://stabbur.example.net \
+  --token-file /etc/stabbur/mac-builder-01.worker.json \
+  --data-dir /var/lib/stabbur-worker
+```
+
+The runtime detects and advertises AutoPkg and Apple tooling. The server rejects registration if
+that exact advertisement exceeds its configured ceiling; after acceptance, the worker claims
+compatible work, heartbeats leases, uploads selected artifacts, and submits builder-neutral
+results. See [Remote workers and packagers](docs/worker-operations.md) for recipe control, fan-out,
+drain/rotation, service supervision, and client/packager boundaries.
+
+## Build and release targets
+
+Rust 1.88 is the MSRV. CI tests stable, beta, and nightly across Linux x86_64, macOS ARM64, and
+Windows x86_64. Release jobs produce static Linux x86_64 and aarch64 archives, a self-contained
+macOS ARM64 archive, and a static-CRT Windows x86_64 archive. Every archive has a SHA-256 checksum;
+tagged releases must point to a commit that already passed main CI.
+
+Until the exact client crate is published, keep its checkout beside this repository. Run the gates
+in [AGENTS.md](AGENTS.md), and consult [COMPATIBILITY.md](COMPATIBILITY.md) before publishing.
+
+## Coordinated operator workflows
+
+The current unreleased contract includes catalog schema 2, exact target/revision reconciliation,
+software status, release withdrawal, worker draining, and bounded reconnecting run watches.
+See the server's [operator workflow guide](../stabbur/docs/operator-workflows.md) and the independent
+[management console](../stabbur-frontend/README.md). Schema 1 catalogs remain accepted without targets.
+Local cross-repository integration does not replace immutable released-image acceptance.
