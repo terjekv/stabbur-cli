@@ -8,7 +8,7 @@ edition = "2024"
 rust-version = "1.88"
 license = "Apache-2.0"
 description = "Operational command-line client for Stabbur"
-repository = "https://github.com/stabbur-dev/stabbur-cli"
+repository = "https://github.com/terjekv/stabbur-cli"
 readme = "README.md"
 
 [[bin]]
