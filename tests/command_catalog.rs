@@ -102,7 +102,7 @@ fn login_accepts_password_sources_but_not_password_values() {
 #[test]
 fn manifest_has_exact_client_and_no_direct_http_dependency() {
     let manifest = std::fs::read_to_string("Cargo.toml").unwrap();
-    assert!(manifest.contains("version = \"=0.1.0\""));
+    assert!(manifest.contains("version = \"=0.0.1\""));
     assert!(manifest.contains("features = [\"blocking\"]"));
     assert!(!manifest.lines().any(|line| line.starts_with("reqwest")));
 }

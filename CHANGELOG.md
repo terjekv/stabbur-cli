@@ -1,6 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [0.0.1] - 2026-09-26
+
+- Target the first coordinated release as 0.0.1.
+- Update rustls to 0.23.45 to address RUSTSEC-2026-0285 without advisory exceptions.
 
 ### Fixed
 
@@ -9,6 +12,11 @@
   `macos` and `arm64` remain accepted CLI aliases. Unknown values and `universal` targets fail at parsing.
 
 ### Added
+
+- Add `catalog import --snapshot ID --selections FILE --output FILE` to prepare a validated catalog for plan/sync.
+
+- Add `target trigger --watch`, workflow help examples, and optional current-channel revision
+  lookup for promotion, while retaining concurrency fencing and automation defaults.
 
 - Add validated catalog schema 2 with exact revision/append preconditions, source-pin proposals,
   software/queue summaries, worker draining and release withdrawal.
@@ -30,6 +38,9 @@
 
 ### Changed
 
+- Render readable nested human output, width-aware tables, local timestamps and actionable
+  field errors. Existing JSON response and error envelopes are unchanged.
+
 - Breaking: list JSON is a cursor envelope; use `.items` rather than treating it as an array.
 
 - Make `recipe create-revision` consume the builder-neutral revision envelope, including the
@@ -37,11 +48,11 @@
 - Fail protected-input prompts immediately when no interactive terminal is available, and preserve
   intentional password-file whitespace while removing only line endings.
 
-## [0.1.0] - 2026-08-26
+## Initial development - 2026-08-26
 
 ### Added
 
-- Complete one-shot command coverage for every Stabbur 0.1 public resource.
+- Complete one-shot command coverage for every Stabbur 0.0.1 public resource.
 - Principal, password, token, role, software, release, variant, channel, recipe revision, run,
   artifact, store, worker, job, audit, and resolver workflows through the exact blocking client.
 - ETag revisions, idempotency keys, explicit confirmation gates, live SSE logs, bounded streaming

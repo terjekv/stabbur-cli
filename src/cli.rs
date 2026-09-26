@@ -4,7 +4,12 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 
 /// Parsed Stabbur command line. Secret values are deliberately absent.
 #[derive(Debug, Parser)]
-#[command(name = "stabbur", version, about)]
+#[command(
+    name = "stabbur",
+    version,
+    about,
+    after_help = "Examples:\n  stabbur auth login --username operator\n  stabbur software status firefox\n  stabbur target trigger firefox-hourly --idempotency-key check-001 --watch\n  stabbur --json catalog plan --file catalog.json"
+)]
 pub struct Cli {
     /// Server origin. Defaults to the protected profile, then localhost.
     #[arg(long, global = true, env = "STABBUR_SERVER_URL")]
@@ -26,7 +31,7 @@ pub struct Cli {
     pub command: Command,
 }
 
-/// Complete v0.1 resource catalog.
+/// Complete v0.0.1 resource catalog.
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Export a promoted installer and reviewed pkginfo into a new Munki delivery directory.
@@ -75,6 +80,18 @@ pub struct CatalogArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum CatalogCommand {
+    /// Prepare disabled targets from a discovered snapshot; review with catalog plan before sync.
+    Import {
+        /// Immutable catalog snapshot identity (see catalog snapshots).
+        #[arg(long)]
+        snapshot: String,
+        /// JSON array of recipe import selections, including names, architecture and output variables.
+        #[arg(long)]
+        selections: PathBuf,
+        /// New validated catalog file. Never overwrites an existing file.
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Propose an exact source pin change and diff without contacting or changing the server.
     ProposeSource {
         #[arg(long)]
@@ -201,10 +218,19 @@ pub enum TargetCommand {
         disable: bool,
     },
     /// Queue one manual run idempotently.
+    #[command(
+        after_help = "Example:\n  stabbur target trigger firefox-hourly --idempotency-key check-001 --watch\n\nWatching exits 0 for success, 2 for failure, 3 for cancellation, and 124 for timeout.\nStopping the watch does not cancel the server-side build."
+    )]
     Trigger {
         target: String,
         #[arg(long)]
         idempotency_key: String,
+        /// Follow logs until the triggered run reaches a terminal outcome.
+        #[arg(long)]
+        watch: bool,
+        /// Overall watch deadline, including reconnections.
+        #[arg(long, default_value_t = 3600, requires = "watch")]
+        timeout_seconds: u64,
     },
     /// List runs created from one target.
     Runs {
@@ -466,13 +492,20 @@ pub enum ReleaseCommand {
     /// Show a release.
     Show { release: String },
     /// Promote a release to testing or stable.
+    #[command(
+        after_help = "Example:\n  stabbur release promote firefox RELEASE_ID --channel testing --current-revision\n\nInteractive use reads the current revision when --revision is omitted.\nAutomation keeps revision 0 as the default; pass an exact --revision or opt into --current-revision."
+    )]
     Promote {
         software: String,
         release: String,
         #[arg(long)]
         channel: String,
-        #[arg(long, default_value_t = 0)]
-        revision: u64,
+        /// Expected channel revision; 0 creates a channel. Interactive omission reads current state.
+        #[arg(long)]
+        revision: Option<u64>,
+        /// Read the channel revision before review; concurrent changes are still rejected.
+        #[arg(long, conflicts_with = "revision")]
+        current_revision: bool,
         #[arg(long)]
         pinned_variant: Option<String>,
         #[arg(long)]
@@ -517,8 +550,12 @@ pub enum ChannelCommand {
         software: String,
         channel: String,
         release: String,
-        #[arg(long, default_value_t = 0)]
-        revision: u64,
+        /// Expected channel revision; 0 creates a channel. Interactive omission reads current state.
+        #[arg(long)]
+        revision: Option<u64>,
+        /// Read the channel revision before review; concurrent changes are still rejected.
+        #[arg(long, conflicts_with = "revision")]
+        current_revision: bool,
         #[arg(long)]
         pinned_variant: Option<String>,
         #[arg(long)]

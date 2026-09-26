@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: ff854987bed6912dccb05660d5c8e4ff45d7375e # Reviewed client 0.1.0 source
+          ref: e31e621f6eee771aa47a5d95d6bff83993e413b5 # Reviewed client 0.0.1 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout
@@ -83,7 +83,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: ff854987bed6912dccb05660d5c8e4ff45d7375e # Reviewed client 0.1.0 source
+          ref: e31e621f6eee771aa47a5d95d6bff83993e413b5 # Reviewed client 0.0.1 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout on Unix
@@ -127,7 +127,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: ff854987bed6912dccb05660d5c8e4ff45d7375e # Reviewed client 0.1.0 source
+          ref: e31e621f6eee771aa47a5d95d6bff83993e413b5 # Reviewed client 0.0.1 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout
@@ -156,7 +156,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: ff854987bed6912dccb05660d5c8e4ff45d7375e # Reviewed client 0.1.0 source
+          ref: e31e621f6eee771aa47a5d95d6bff83993e413b5 # Reviewed client 0.0.1 source
           path: stabbur-client-rust
 
       - name: Check advisories, licenses, bans, and sources
@@ -216,7 +216,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: ff854987bed6912dccb05660d5c8e4ff45d7375e # Reviewed client 0.1.0 source
+          ref: e31e621f6eee771aa47a5d95d6bff83993e413b5 # Reviewed client 0.0.1 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout
@@ -317,7 +317,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: terjekv/stabbur-client-rust
-          ref: ff854987bed6912dccb05660d5c8e4ff45d7375e # Reviewed client 0.1.0 source
+          ref: e31e621f6eee771aa47a5d95d6bff83993e413b5 # Reviewed client 0.0.1 source
           path: stabbur-client-rust
 
       - name: Place public client beside CLI checkout on Unix

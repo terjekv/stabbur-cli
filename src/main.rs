@@ -80,7 +80,7 @@ fn main() {
                 serde_json::json!({"error": {"message": error.to_string(), "exit_code": error.exit_code()}})
             );
         } else {
-            eprintln!("error: {error}");
+            eprintln!("error: {}", output::human_error(&error));
         }
         std::process::exit(error.exit_code());
     }
@@ -219,10 +219,24 @@ fn run(cli: &Cli) -> Result<(), AppError> {
                 release,
                 channel,
                 revision,
+                current_revision,
                 pinned_variant,
                 reason,
             } => {
-                confirm(cli.yes, &format!("promote release {release} to {channel}"))?;
+                let revision = promotion_revision(
+                    cli,
+                    &client,
+                    software,
+                    channel,
+                    *revision,
+                    *current_revision,
+                )?;
+                confirm(
+                    cli.yes,
+                    &format!(
+                        "promote release {release} to {software}/{channel} at revision {revision}"
+                    ),
+                )?;
                 output::record(
                     &client.software().promote(
                         software,
@@ -230,7 +244,7 @@ fn run(cli: &Cli) -> Result<(), AppError> {
                         release.parse()?,
                         parse_optional(pinned_variant.as_ref())?,
                         reason.as_deref(),
-                        *revision,
+                        revision,
                     )?,
                     cli.json,
                 )
@@ -283,10 +297,24 @@ fn run(cli: &Cli) -> Result<(), AppError> {
                 channel,
                 release,
                 revision,
+                current_revision,
                 pinned_variant,
                 reason,
             } => {
-                confirm(cli.yes, &format!("move channel {software}/{channel}"))?;
+                let revision = promotion_revision(
+                    cli,
+                    &client,
+                    software,
+                    channel,
+                    *revision,
+                    *current_revision,
+                )?;
+                confirm(
+                    cli.yes,
+                    &format!(
+                        "move channel {software}/{channel} to release {release} at revision {revision}"
+                    ),
+                )?;
                 output::record(
                     &client.software().promote(
                         software,
@@ -294,7 +322,7 @@ fn run(cli: &Cli) -> Result<(), AppError> {
                         release.parse()?,
                         parse_optional(pinned_variant.as_ref())?,
                         reason.as_deref(),
-                        *revision,
+                        revision,
                     )?,
                     cli.json,
                 )
@@ -440,6 +468,26 @@ fn run(cli: &Cli) -> Result<(), AppError> {
     }
 }
 
+fn import_catalog(
+    cli: &Cli,
+    client: &blocking::Client<stabbur_client::Authenticated>,
+    snapshot: &str,
+    selections: &std::path::Path,
+    output_path: &std::path::Path,
+) -> Result<(), AppError> {
+    let snapshot = client.catalog().snapshot(snapshot.parse()?)?;
+    let selections: Vec<stabbur_client::RecipeImportSelection> = read_json(selections)?;
+    let manifest = stabbur_client::prepare_recipe_import(&snapshot.manifest, &selections)?;
+    let mut destination = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(output_path)?;
+    serde_json::to_writer_pretty(&mut destination, &manifest).map_err(|_| AppError::Output)?;
+    destination.write_all(b"\n")?;
+    destination.sync_all()?;
+    output::record(&manifest, cli.json)
+}
+
 fn run_catalog(
     cli: &Cli,
     client: &blocking::Client<stabbur_client::Authenticated>,
@@ -468,6 +516,11 @@ fn run_catalog(
                 cli.json,
             )
         }
+        CatalogCommand::Import {
+            snapshot,
+            selections,
+            output,
+        } => import_catalog(cli, client, snapshot, selections, output),
         CatalogCommand::Snapshots(page) => {
             let page = load_page(page, |cursor, limit| {
                 client.catalog().snapshots(cursor, limit)
@@ -646,10 +699,22 @@ fn run_target(
         TargetCommand::Trigger {
             target,
             idempotency_key,
-        } => output::record(
-            &client.build_targets().trigger(target, idempotency_key)?,
-            cli.json,
-        ),
+            watch: follow,
+            timeout_seconds,
+        } => {
+            let run = client.build_targets().trigger(target, idempotency_key)?;
+            if *follow {
+                if !cli.json {
+                    eprintln!(
+                        "Following run {}. Press Ctrl-C to stop watching; the build continues.",
+                        run.id
+                    );
+                }
+                watch(client, run.id, None, *timeout_seconds, cli.json)
+            } else {
+                output::record(&run, cli.json)
+            }
+        }
         TargetCommand::Runs { target, page } => {
             let page = load_page(page, |cursor, limit| {
                 client.build_targets().runs(target, cursor, limit)
@@ -1099,6 +1164,25 @@ where
         .map(str::parse)
         .transpose()
         .map_err(AppError::Client)
+}
+
+fn promotion_revision(
+    cli: &Cli,
+    client: &blocking::Client<stabbur_client::Authenticated>,
+    software: &str,
+    channel: &str,
+    explicit: Option<u64>,
+    fetch_current: bool,
+) -> Result<u64, AppError> {
+    let interactive = !cli.json && !cli.yes && std::io::stdin().is_terminal();
+    if !fetch_current && (explicit.is_some() || !interactive) {
+        return Ok(explicit.unwrap_or(0));
+    }
+    match client.software().channel(software, channel) {
+        Ok(value) => Ok(value.revision),
+        Err(stabbur_client::ApiError::Server(problem)) if problem.status == 404 => Ok(0),
+        Err(error) => Err(error.into()),
+    }
 }
 
 fn confirm(preconfirmed: bool, operation: &str) -> Result<(), AppError> {

@@ -1,7 +1,7 @@
 # Stabbur CLI
 
-`stabbur` is the primary operational interface for Stabbur 0.1. It pins
-`stabbur_client = 0.1.0` exactly, has no direct HTTP dependency, and performs every API operation
+`stabbur` is the primary operational interface for Stabbur 0.0.1. It pins
+`stabbur_client = 0.0.1` exactly, has no direct HTTP dependency, and performs every API operation
 through the blocking supported client.
 
 ```bash
@@ -23,7 +23,9 @@ stabbur resolve firefox --channel stable --platform mac_os --architecture aarch6
 stabbur artifact download SHA256 --output Firefox.pkg --resume
 ```
 
-Human-readable tables are the default. Add global `--json` for stable automation output. Unsafe
+Human-readable tables are the default, with complete labeled records when a table exceeds the
+terminal width (`COLUMNS`, default 120). Nested results and field errors have readable labels;
+timestamps include the local timezone. Add global `--json` for stable automation output. Unsafe
 publication, rejection, cancellation, principal/worker disabling, capability replacement, and
 credential rotation prompt for the exact operation; automation must pass global `--yes`.
 
@@ -53,7 +55,7 @@ local server operation: stop the API and use `stabbur-server admin reset-passwor
 
 ## Command map
 
-| Command     | v0.1 operations                                                              |
+| Command     | v0.0.1 operations                                                            |
 | ----------- | ---------------------------------------------------------------------------- |
 | `bootstrap` | one-time unauthenticated first-administrator creation                        |
 | `auth`      | bootstrap, login, password change/reset, principals, sessions, tokens, roles |
@@ -72,9 +74,16 @@ local server operation: stop the API and use `stabbur-server admin reset-passwor
 | `audit`     | cursor-paginated append-only events                                          |
 | `resolve`   | select exactly one readable primary installer for a target                   |
 
-Use `stabbur <resource> <operation> --help` for exact fields. Mutable commands require the current
-numeric `--revision` shown by `show`; revision `0` creates a channel. Retryable operations require
-or accept an idempotency key.
+Use `stabbur <resource> <operation> --help` for exact fields and workflow examples. Mutable commands
+require the current numeric `--revision` shown by `show`; revision `0` creates a channel. Interactive
+promotion reads the current revision when omitted. Automation keeps revision `0` as the default,
+or can explicitly use `--current-revision`. A concurrent change still rejects the promotion; the
+CLI never automatically retries it with a newer revision.
+
+Use `stabbur target trigger NAME --idempotency-key UNIQUE_KEY --watch` to trigger and follow a run.
+`--timeout-seconds` bounds the watch, including reconnections. Success exits 0, failure 2,
+cancellation 3, and timeout 124. Stopping a watch leaves the server-side build running.
+Retryable operations require or accept an idempotency key.
 
 Catalog synchronization is additive and history-preserving: it creates missing software and
 recipes, updates managed software metadata with optimistic concurrency, and appends a revision
@@ -145,3 +154,36 @@ software status, release withdrawal, worker draining, and bounded reconnecting r
 See the server's [operator workflow guide](../stabbur/docs/operator-workflows.md) and the independent
 [management console](../stabbur-frontend/README.md). Schema 1 catalogs remain accepted without targets.
 Local cross-repository integration does not replace immutable released-image acceptance.
+
+## Import discovered AutoPkg recipes
+
+Use `stabbur catalog snapshots` to select an immutable worker or repository snapshot. Create a
+selection file such as:
+
+```json
+[
+  {
+    "identifier": "com.example.download.App",
+    "slug": "app",
+    "name": "App",
+    "architecture": "aarch64",
+    "minimum_macos": "13",
+    "version_variable": "version",
+    "artifact_variable": "pathname",
+    "media_type": "application/octet-stream"
+  }
+]
+```
+
+```sh
+stabbur catalog import --snapshot SNAPSHOT_ID --selections selections.json --output imported.json
+stabbur catalog plan --file imported.json
+stabbur catalog sync --file imported.json
+```
+
+Import writes a new file without changing the server. Targets are disabled and manual. Select
+`pkg_path` instead of `pathname` for a generated package and review the recipe's artifact
+architecture and verification policy. Imports retain exact repository sources, including committed
+overrides and their parents. Resolve discovery blockers before importing. Trust is never accepted
+automatically. Reusing existing software, recipe or target names may update those resources when
+you apply the catalog plan; review the complete plan before syncing.

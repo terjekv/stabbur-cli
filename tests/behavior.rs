@@ -151,8 +151,9 @@ fn mock_sequence(
                     assert!(count > 0, "mock request body ended early");
                     request.extend_from_slice(&buffer[..count]);
                 }
+                let content_type = if body.starts_with("event:") { "text/event-stream" } else { "application/json" };
                 let response = format!(
-                    "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\nx-request-id: cli-catalog-test\r\n\r\n{body}",
+                    "HTTP/1.1 {status}\r\ncontent-type: {content_type}\r\ncontent-length: {}\r\nconnection: close\r\nx-request-id: cli-catalog-test\r\n\r\n{body}",
                     body.len()
                 );
                 stream.write_all(response.as_bytes()).unwrap();
@@ -725,4 +726,109 @@ fn waiting_for_a_failed_run_has_a_distinct_exit_status() {
         .stdout(predicate::str::contains("failed"))
         .stderr(predicate::str::contains("\"exit_code\":2"));
     request.join().unwrap();
+}
+
+#[test]
+fn trigger_watch_follows_the_returned_run_and_preserves_failure_exit() {
+    let run = r#"{"id":"01900000-0000-7000-8000-000000000001","recipe_revision_id":"01900000-0000-7000-8000-000000000002","software_id":"01900000-0000-7000-8000-000000000003","state":"queued","parameters":{},"result":null,"created_at":"2026-01-01T00:00:00Z","completed_at":null}"#;
+    let complete = "event: complete\ndata: {\"run_id\":\"01900000-0000-7000-8000-000000000001\",\"state\":\"failed\"}\n\n";
+    let (server, requests) = mock_sequence(vec![("201 Created", run), ("200 OK", complete)]);
+    let directory = tempfile::tempdir().unwrap();
+    Command::cargo_bin("stabbur")
+        .unwrap()
+        .args([
+            "--server",
+            &server,
+            "--profile",
+            directory.path().join("missing").to_str().unwrap(),
+            "target",
+            "trigger",
+            "nightly",
+            "--idempotency-key",
+            "watch-once",
+            "--watch",
+            "--timeout-seconds",
+            "5",
+        ])
+        .env("STABBUR_TOKEN", "fixture-token")
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("Following run"))
+        .stdout(predicate::str::contains("failed"));
+    let requests = requests.join().unwrap();
+    assert!(requests[0].starts_with("POST /api/v1/build-targets/nightly/runs "));
+    assert!(
+        requests[1].starts_with("GET /api/v1/runs/01900000-0000-7000-8000-000000000001/events ")
+    );
+}
+
+#[test]
+fn fetched_promotion_revision_is_fenced_and_not_retried_after_conflict() {
+    let channel = r#"{"software_id":"01900000-0000-7000-8000-000000000003","name":"stable","release_id":"01900000-0000-7000-8000-000000000002","pinned_variant_id":null,"revision":7}"#;
+    let conflict = r#"{"code":"stale_revision","status":412,"detail":"The resource changed since it was read.","request_id":"revision-test","validation_errors":[]}"#;
+    let (server, requests) = mock_sequence(vec![
+        ("200 OK", channel),
+        ("412 Precondition Failed", conflict),
+    ]);
+    let directory = tempfile::tempdir().unwrap();
+    Command::cargo_bin("stabbur")
+        .unwrap()
+        .args([
+            "--server",
+            &server,
+            "--profile",
+            directory.path().join("missing").to_str().unwrap(),
+            "--yes",
+            "release",
+            "promote",
+            "firefox",
+            "01900000-0000-7000-8000-000000000004",
+            "--channel",
+            "stable",
+            "--current-revision",
+        ])
+        .env("STABBUR_TOKEN", "fixture-token")
+        .assert()
+        .code(1)
+        .stderr(predicate::str::contains("review the change"))
+        .stderr(predicate::str::contains("Problem {").not());
+    let requests = requests.join().unwrap();
+    assert!(requests[0].starts_with("GET /api/v1/software/firefox/channels/stable "));
+    assert!(requests[1].to_lowercase().contains("if-match: \"rev-7\""));
+}
+
+#[test]
+fn human_errors_show_field_diagnostics_and_keep_json_error_envelope() {
+    let problem = r#"{"code":"validation_failed","status":400,"detail":"The slug is invalid.","request_id":"input-test","validation_errors":[{"field":"slug","code":"invalid","message":"Use lowercase letters."}]}"#;
+    for json in [false, true] {
+        let (server, request) = mock_once_response("400 Bad Request", problem);
+        let directory = tempfile::tempdir().unwrap();
+        let mut command = Command::cargo_bin("stabbur").unwrap();
+        command
+            .args([
+                "--server",
+                &server,
+                "--profile",
+                directory.path().join("missing").to_str().unwrap(),
+                "software",
+                "show",
+                "invalid",
+            ])
+            .env("STABBUR_TOKEN", "fixture-token");
+        if json {
+            command.arg("--json");
+        }
+        let assertion = command.assert().code(1);
+        let stderr = String::from_utf8_lossy(&assertion.get_output().stderr);
+        if json {
+            let value: serde_json::Value = serde_json::from_str(&stderr).unwrap();
+            assert_eq!(value["error"]["exit_code"], 1);
+            assert!(value["error"]["message"].is_string());
+        } else {
+            assert!(stderr.contains("slug: Use lowercase letters."));
+            assert!(stderr.contains("Reference: input-test"));
+            assert!(!stderr.contains("Problem {"));
+        }
+        request.join().unwrap();
+    }
 }
