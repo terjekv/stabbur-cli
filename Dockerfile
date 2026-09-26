@@ -9,9 +9,8 @@ WORKDIR /usr/src/stabbur-cli
 
 RUN apk add --no-cache build-base cmake
 
-# The build context is the parent containing both independent repository checkouts.
-COPY stabbur-client-rust /usr/src/stabbur-client-rust
-COPY stabbur-cli .
+# Cargo resolves the public client from its immutable released Git revision.
+COPY . .
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \

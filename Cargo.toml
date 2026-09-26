@@ -15,6 +15,11 @@ readme = "README.md"
 name = "stabbur"
 path = "src/main.rs"
 
+[package.metadata.stabbur]
+server-version = "0.0.1"
+server-image = "ghcr.io/terjekv/stabbur-server@sha256:41aba0e2051de7d74df09a6e57487a4e1755706d587aca54603167953fd0748d"
+client-version = "0.0.1"
+
 [dependencies]
 base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
@@ -25,7 +30,7 @@ rpassword = "7.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
-stabbur_client = { version = "=0.0.1", path = "../stabbur-client-rust", default-features = false, features = ["blocking"] }
+stabbur_client = { version = "=0.0.1", git = "https://github.com/terjekv/stabbur-client-rust", rev = "802b60e653b75b3694b0ed4607a6f61a139ba093", default-features = false, features = ["blocking"] }
 tempfile = "3"
 thiserror = "2.0"
 uuid = { version = "1.18", features = ["v7"] }

@@ -1,0 +1,91 @@
+name: Release verified CLI
+on:
+  workflow_run:
+    workflows: [CI and release]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: write
+  actions: read
+  packages: read
+concurrency:
+  group: versioned-cli-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_sha == github.sha &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          path: stabbur-cli
+      - name: Require released client and immutable server evidence
+        id: release
+        working-directory: stabbur-cli
+        run: python3 scripts/release.py prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Download the exact successful CI platform packages
+        if: steps.release.outputs.ready == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+          pattern: binaries-*
+          path: stabbur-cli/dist
+          merge-multiple: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: steps.release.outputs.ready == 'true'
+        with:
+          repository: terjekv/stabbur
+          ref: ${{ steps.release.outputs.server_revision }}
+          path: stabbur
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: steps.release.outputs.ready == 'true'
+        with:
+          repository: terjekv/stabbur-client-rust
+          ref: ${{ steps.release.outputs.client_revision }}
+          path: stabbur-client-rust
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: steps.release.outputs.ready == 'true'
+        with:
+          repository: terjekv/stabbur-frontend
+          ref: ${{ steps.release.outputs.frontend_revision }}
+          path: stabbur-frontend
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c
+        if: steps.release.outputs.ready == 'true'
+        with:
+          toolchain: stable
+      - name: Authenticate to GHCR
+        if: steps.release.outputs.ready == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Exercise this CLI and the released client against the exact server image
+        if: steps.release.outputs.ready == 'true'
+        working-directory: stabbur
+        env:
+          IMAGE: ${{ steps.release.outputs.image }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/stabbur-browser"
+          "$RUNNER_TEMP/stabbur-browser/bin/python" -m pip install -r scripts/requirements-e2e.txt
+          "$RUNNER_TEMP/stabbur-browser/bin/python" -m playwright install --with-deps chromium
+          "$RUNNER_TEMP/stabbur-browser/bin/python" scripts/check-workspace-integration.py \
+            --target target --server-image "$IMAGE" --browser
+      - name: Verify checksums and publish the immutable version
+        if: steps.release.outputs.ready == 'true'
+        working-directory: stabbur-cli
+        run: python3 scripts/release.py publish --assets dist
+        env:
+          GH_TOKEN: ${{ github.token }}

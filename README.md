@@ -144,12 +144,16 @@ Windows x86_64. Release jobs produce static Linux x86_64 and aarch64 archives, a
 macOS ARM64 archive, and a static-CRT Windows x86_64 archive. Every archive has a SHA-256 checksum;
 tagged releases must point to a commit that already passed main CI.
 
-Until the exact client crate is published, keep its checkout beside this repository. Run the gates
-in [AGENTS.md](AGENTS.md), and consult [COMPATIBILITY.md](COMPATIBILITY.md) before publishing.
+Download platform archives and checksums from the
+[0.0.1 release](https://github.com/terjekv/stabbur-cli/releases/tag/v0.0.1).
+Source builds fetch the exact released public client revision recorded in `Cargo.toml` and
+`Cargo.lock`; a sibling checkout is unnecessary. Run the gates in [AGENTS.md](AGENTS.md).
+The release workflow repeats CLI and browser acceptance against the immutable server image in
+[COMPATIBILITY.md](COMPATIBILITY.md) before publishing the verified platform archives.
 
 ## Coordinated operator workflows
 
-The current unreleased contract includes catalog schema 2, exact target/revision reconciliation,
+The 0.0.1 contract includes catalog schema 2, exact target/revision reconciliation,
 software status, release withdrawal, worker draining, and bounded reconnecting run watches.
 See the server's [operator workflow guide](../stabbur/docs/operator-workflows.md) and the independent
 [management console](../stabbur-frontend/README.md). Schema 1 catalogs remain accepted without targets.

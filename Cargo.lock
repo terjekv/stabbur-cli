@@ -1254,6 +1254,7 @@ dependencies = [
 [[package]]
 name = "stabbur_client"
 version = "0.0.1"
+source = "git+https://github.com/terjekv/stabbur-client-rust?rev=802b60e653b75b3694b0ed4607a6f61a139ba093#802b60e653b75b3694b0ed4607a6f61a139ba093"
 dependencies = [
  "chrono",
  "reqwest",
