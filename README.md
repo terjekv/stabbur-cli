@@ -218,3 +218,11 @@ installation of every selected application and belongs only on disposable test M
 
 These commands require the coordinated development server. The released 0.0.1 image does not
 implement saved exports. The earlier `munki-export` command remains available.
+
+## Search the library (development server)
+
+Use `stabbur software search firefox --view review` or
+`stabbur --json software search --view attention --all` to filter the complete catalog before
+pagination. `--sort name` is the default; `--sort newest` uses software creation identity.
+The command never compares software version strings. JSON preserves `{items,next_cursor}`.
+Reuse a cursor only with the same query, view, and ordering. Existing `software list` is unchanged.

@@ -434,6 +434,18 @@ pub struct SoftwareArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum SoftwareCommand {
+    /// Search all applications with server-side attention filters and summary columns.
+    Search {
+        /// Literal display-name or slug substring.
+        #[arg(default_value = "")]
+        query: String,
+        #[arg(long, default_value = "all", value_parser = ["all", "attention", "failed", "blocked", "review", "not_built"])]
+        view: String,
+        #[arg(long, default_value = "name", value_parser = ["name", "newest"])]
+        sort: String,
+        #[command(flatten)]
+        page: PageArgs,
+    },
     /// Show publication, latest build, scheduling, and blocked-worker status.
     Status { software: String },
     /// List software.

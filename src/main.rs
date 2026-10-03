@@ -143,6 +143,48 @@ fn run(cli: &Cli) -> Result<(), AppError> {
         Command::Catalog(arguments) => run_catalog(cli, &client, &arguments.command),
         Command::Target(arguments) => run_target(cli, &client, &arguments.command),
         Command::Software(arguments) => match &arguments.command {
+            SoftwareCommand::Search {
+                query,
+                view,
+                sort,
+                page,
+            } => {
+                use stabbur_client::{LibraryQuery, LibrarySort, LibraryView};
+                let view = match view.as_str() {
+                    "attention" => LibraryView::Attention,
+                    "failed" => LibraryView::Failed,
+                    "blocked" => LibraryView::Blocked,
+                    "review" => LibraryView::Review,
+                    "not_built" => LibraryView::NotBuilt,
+                    _ => LibraryView::All,
+                };
+                let sort = if sort == "newest" {
+                    LibrarySort::Newest
+                } else {
+                    LibrarySort::Name
+                };
+                let query = LibraryQuery::new(query, view, sort)?;
+                let result = load_page(page, |cursor, limit| {
+                    client.software().library(&query, cursor, limit)
+                })?;
+                if cli.json {
+                    output::json(&result)
+                } else {
+                    output::list(
+                        &result.items,
+                        false,
+                        &[
+                            "name",
+                            "latest_run_state",
+                            "review_count",
+                            "blocked_targets",
+                            "outstanding_runs",
+                        ],
+                    )?;
+                    output::next_cursor(result.next_cursor.as_deref());
+                    Ok(())
+                }
+            }
             SoftwareCommand::Status { software } => {
                 output::record(&client.software().status(software)?, cli.json)
             }
