@@ -2,6 +2,7 @@
 
 pub mod cli;
 mod downloads;
+mod exports;
 mod munki;
 mod output;
 use downloads::download;
@@ -454,6 +455,7 @@ fn run(cli: &Cli) -> Result<(), AppError> {
                 )
             }
         },
+        Command::Exports(arguments) => exports::run(&client, &arguments.command, cli),
         Command::MunkiExport(arguments) => munki::export(&client, arguments, cli.json),
         Command::Resolve(arguments) => output::record(
             &client.software().resolve(

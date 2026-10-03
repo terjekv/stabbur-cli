@@ -30,7 +30,7 @@ rpassword = "7.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
-stabbur_client = { version = "=0.0.1", git = "https://github.com/terjekv/stabbur-client-rust", rev = "802b60e653b75b3694b0ed4607a6f61a139ba093", default-features = false, features = ["blocking"] }
+stabbur_client = { version = "=0.0.1", git = "https://github.com/terjekv/stabbur-client-rust", rev = "0634d8c177aa90c1bd86056a75fc67d2ae282ce5", default-features = false, features = ["blocking"] }
 tempfile = "3"
 thiserror = "2.0"
 uuid = { version = "1.18", features = ["v7"] }

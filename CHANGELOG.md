@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add exports list/show/save/plan/apply/history/download/profile/revoke-profiles using the shared client. Downloads verify complete snapshots into a new directory and preserve existing Munki manifest management. New commands require the coordinated development server.
+
 ## [0.0.1] - 2026-09-26
 
 - Target the first coordinated release as 0.0.1.

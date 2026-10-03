@@ -34,6 +34,8 @@ pub struct Cli {
 /// Complete v0.0.1 resource catalog.
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Saved batch exports, shared with the web console.
+    Exports(ExportArgs),
     /// Export a promoted installer and reviewed pkginfo into a new Munki delivery directory.
     MunkiExport(MunkiExportArgs),
     /// Show durable queue and worker measurements.
@@ -859,4 +861,65 @@ pub struct MunkiExportArgs {
     /// Installer format, explicitly reviewed independently of the digest.
     #[arg(long, value_parser = ["pkg", "dmg"])]
     pub extension: String,
+}
+
+/// Saved software selections and reviewed Munki snapshots.
+#[derive(Debug, Args)]
+pub struct ExportArgs {
+    #[command(subcommand)]
+    pub command: ExportCommand,
+}
+#[derive(Debug, Subcommand)]
+pub enum ExportCommand {
+    /// List saved export definitions shared with the console.
+    List(PageArgs),
+    /// Show a definition and its current publication generation.
+    Show { export: String },
+    /// Create or replace a draft from JSON; publication is a separate reviewed step.
+    Save {
+        #[arg(long)]
+        file: PathBuf,
+        /// Existing export to update; requires --revision from exports show.
+        #[arg(long, requires = "revision")]
+        export: Option<String>,
+        #[arg(long, requires = "export")]
+        revision: Option<u64>,
+    },
+    /// Preview the entire batch and optionally save the exact plan for apply.
+    Plan {
+        export: String,
+        #[arg(long)]
+        output: Option<PathBuf>,
+    },
+    /// Publish a saved reviewed plan atomically; rejects stale previews.
+    Apply {
+        #[arg(long)]
+        plan_file: PathBuf,
+    },
+    /// List immutable publication history (after is the previous generation cursor).
+    History {
+        export: String,
+        #[arg(long, default_value_t = 0)]
+        after: u64,
+        #[arg(long, default_value_t = 50)]
+        limit: u32,
+    },
+    /// Download a verified snapshot into OUTPUT/repository; existing paths are never replaced.
+    Download {
+        export: String,
+        #[arg(long)]
+        generation: Option<u64>,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Save an owner-only Munki device profile with a new export-only credential.
+    Profile {
+        export: String,
+        #[arg(long)]
+        output: PathBuf,
+        #[arg(long)]
+        test_all: bool,
+    },
+    /// Revoke every earlier profile for this export; replacement profiles must be distributed.
+    RevokeProfiles { export: String },
 }
