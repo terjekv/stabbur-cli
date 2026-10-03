@@ -191,3 +191,38 @@ architecture and verification policy. Imports retain exact repository sources, i
 overrides and their parents. Resolve discovery blockers before importing. Trust is never accepted
 automatically. Reusing existing software, recipe or target names may update those resources when
 you apply the catalog plan; review the complete plan before syncing.
+
+## Saved batch exports (development server)
+
+Create a named software selection in the console, or use `exports save --file definition.json`.
+Follow explicit channels or pin exact releases; no version ordering is inferred. Installation
+settings are reused on upgrades. Definitions and history are shared with the console.
+
+```sh
+stabbur exports list --all
+stabbur exports show staff-macs
+stabbur exports plan staff-macs --output reviewed-plan.json
+stabbur exports apply --plan-file reviewed-plan.json
+stabbur exports download staff-macs --output new-export
+stabbur exports profile staff-macs --output managed-macs.mobileconfig
+```
+
+Updating a draft requires `exports save --export NAME --revision N --file definition.json`.
+Apply requires a saved plan and confirmation (`--yes` for reviewed automation); a stale preview
+fails without partial publication. Download creates `new-export/repository` only after verification
+and refuses existing destinations. It contains installers, pkginfo, catalogs and provenance, with
+no manifests. Merge files into an existing Munki repository, regenerate catalogs and retain its
+assignments. Profiles are owner-only files containing an export-only device credential; use
+`exports revoke-profiles NAME` to revoke all earlier profiles for that export. `--test-all` requests
+installation of every selected application and belongs only on disposable test Macs.
+
+These commands require the coordinated development server. The released 0.0.1 image does not
+implement saved exports. The earlier `munki-export` command remains available.
+
+## Search the library (development server)
+
+Use `stabbur software search firefox --view review` or
+`stabbur --json software search --view attention --all` to filter the complete catalog before
+pagination. `--sort name` is the default; `--sort newest` uses software creation identity.
+The command never compares software version strings. JSON preserves `{items,next_cursor}`.
+Reuse a cursor only with the same query, view, and ordering. Existing `software list` is unchanged.

@@ -290,7 +290,7 @@ pub fn log_page(
     next_cursor(value.next_cursor.as_deref());
     Ok(())
 }
-fn next_cursor(cursor: Option<&str>) {
+pub fn next_cursor(cursor: Option<&str>) {
     if let Some(cursor) = cursor {
         eprintln!("Next page: --cursor {} (or use --all)", safe(cursor));
     }

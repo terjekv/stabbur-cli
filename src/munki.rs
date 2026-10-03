@@ -177,7 +177,7 @@ fn escape(value: &str) -> Result<String, AppError> {
         .replace('"', "&quot;")
         .replace('\'', "&apos;"))
 }
-fn plist(value: &Value, output: &mut String) -> Result<(), AppError> {
+pub(crate) fn plist(value: &Value, output: &mut String) -> Result<(), AppError> {
     use std::fmt::Write as _;
     match value {
         Value::String(value) => {

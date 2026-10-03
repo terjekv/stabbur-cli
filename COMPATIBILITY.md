@@ -28,3 +28,9 @@ x86_64 archives from successful main CI. The
 
 Rust 1.88 remains the MSRV. Stable, beta and nightly platform tests, release linkage checks,
 package checksums, and dependency/advisory policy must pass before publication.
+
+## Unreleased saved-export extension
+
+The development CLI pins export client `0634d8c177aa90c1bd86056a75fc67d2ae282ce5` and uses its 86-operation contract.
+`exports` commands require the matching development server. The immutable 0.0.1 image and release
+evidence above describe the earlier 75-operation release and do not claim saved-export support.

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add `software search [QUERY] --view all|attention|failed|blocked|review|not_built`
+  with name/newest sorting, aggregate status, and ordinary cursor/`--all` support.
+  This command requires the coordinated development server and client.
+
+- Add exports list/show/save/plan/apply/history/download/profile/revoke-profiles using the shared client. Downloads verify complete snapshots into a new directory and preserve existing Munki manifest management. New commands require the coordinated development server.
+
 ## [0.0.1] - 2026-09-26
 
 - Target the first coordinated release as 0.0.1.
